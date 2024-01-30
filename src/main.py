@@ -1,14 +1,6 @@
-# TODO: Corregir cuando detecta algún botón del mouse, que no inicie inmediatamente
-
 from PyQt6 import QtWidgets
 from src.view.autoclickerInterface import MainWindow
 import sys
-import os
-
-# Añadir la ruta del proyecto al sys.path
-directorio_proyecto = os.path.abspath(os.path.join(os.path.dirname(__file__), "src"))
-print(directorio_proyecto)
-sys.path.append(directorio_proyecto)
 
 if __name__ == '__main__':
     try:
