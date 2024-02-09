@@ -107,7 +107,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def on_click_detectado(self, button):
         try:
             if not self.dialogWindow_open:
-                if not button == "Button.left":
+                if not button == "Button.left" or not button == "Button.right":
                     self.reduction_percentage = 0.9
                     self.boton_activacion = self.mainWindow.comboBoxKey.currentText()
                     print(f"\nTecla detectada main window: {button}")
@@ -143,10 +143,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.mainWindow.stackedWidget.setCurrentIndex(0)
 
     def pausar_listener_mainWindow(self):
-        self.event_listener_thread.pausar_listener()
+        self.event_listener_thread.pausar_listener("MAIN")
 
     def reactivar_listener_mainWindow(self):
-        self.event_listener_thread.reactivar_listener()
+        self.event_listener_thread.reactivar_listener("MAIN")
 
     def mostrarVentanaAuxiliar(self):
         if not self.autoclicker_state:
@@ -156,18 +156,19 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def obtenerTeclaClickDetectado(self, detected_element):
         try:
-            if self.dialogWindow_open:
-                combo_box = self.mainWindow.comboBoxKey
-                if detected_element == "Button.left":
-                    mensaje = f"No se permite a {detected_element} como tecla de activación."
-                    print(mensaje)
-                    MensajesWindow.mostrarMensajeAdvertencia(mensaje)
-                elif combo_box.findText(detected_element) == -1:
-                    self.agregarTeclaDetectadaComboBox(detected_element)
-                else:
-                    print(f"El elemento {detected_element} ya se encuentra registrado en el QComboBox.")
-            self.reactivar_listener_mainWindow()
             self.dialogWindow_open = False
+            combo_box = self.mainWindow.comboBoxKey
+            if detected_element == "Button.left" or detected_element == "Button.right":
+                mensaje = f"No se permite a {detected_element} como tecla de activación."
+                print(mensaje)
+                MensajesWindow.mostrarMensajeAdvertencia(mensaje)
+            elif combo_box.findText(detected_element) == -1:
+                self.agregarTeclaDetectadaComboBox(detected_element)
+            else:
+                mensaje = f"El elemento {detected_element} ya se encuentra registrado en la lista."
+                print(mensaje)
+                MensajesWindow.mostrarMensajeElementoDuplicado(mensaje)
+            self.reactivar_listener_mainWindow()
         except Exception as e:
             print("Error inesperado durante la obtención de la tecla/click detectado", e)
 
@@ -230,7 +231,6 @@ class MainWindow(QtWidgets.QMainWindow):
     def on_thread_finished(self):
         print("El hilo ha finalizado.\n")
 
-
 class DialogWindowDetectarTecla(QtWidgets.QDialog):
     def __init__(self, parent=None):
         try:
@@ -241,32 +241,35 @@ class DialogWindowDetectarTecla(QtWidgets.QDialog):
             self.event_listener_thread2 = EventListenerThread()
             self.event_listener_thread2.tecla_detectada.connect(self.on_tecla_detectada)
             self.event_listener_thread2.click_detectado.connect(self.on_click_detectado)
+            self.event_listener_thread2.start()
+            self.event_listener_thread2.pausar_listener("DIALOG")
 
         except Exception as e:
             print(e)
 
     def mostrar(self):
+        self.event_listener_thread2.reactivar_listener("DIALOG")
         self.show()
-        self.event_listener_thread2.start()
 
     def closeEvent(self, event):
-        self.event_listener_thread2.pausar_listener()
+        self.event_listener_thread2.pausar_listener("DIALOG")
         self.close()
 
     def on_tecla_detectada(self, tecla):
         tecla = tecla.upper()
         print(f"\nTecla detectada en dialog: {tecla}")
+        #self.event_listener_thread2.pausar_listener()
         self.parent.obtenerTeclaClickDetectado(tecla)
         self.close()
 
     def on_click_detectado(self, button):
-        if button == "Button.left":
-            return
-        else:
+        try:
             print(f"\nBotón de mouse detectado en dialog: {button}")
+            self.event_listener_thread2.pausar_listener("DIALOG")
             self.parent.obtenerTeclaClickDetectado(button)
             self.close()
-
+        except Exception as e:
+            print(e)
 
 class EventListenerThread(QThread):
     tecla_detectada = pyqtSignal(str)
@@ -278,7 +281,7 @@ class EventListenerThread(QThread):
         self.mouse_listener = None
         self.pressed_keys = set()
         self.pressed_buttons = set()
-        self.pause_requested = False  # Nuevo atributo
+        self.pause_requested = False
 
     def run(self):
         self.keyboard_listener = keyboard.Listener(on_press=self.on_press,
@@ -326,21 +329,21 @@ class EventListenerThread(QThread):
             button_str = str(button)
 
             if pressed:
-                if button_str not in self.pressed_buttons:
-                    self.click_detectado.emit(button_str)
-                    self.pressed_buttons.add(button_str)
-            else:
-                # print("Releasing click")
-                self.pressed_buttons.discard(button_str)
+                #if button_str not in self.pressed_buttons:
+                self.click_detectado.emit(button_str)
+                    #self.pressed_buttons.add(button_str)
+            #else:
+            #    self.pressed_buttons.discard(button_str)
         except Exception as e:
             print(f"Error en on_click: {e}")
 
-    def pausar_listener(self):
+    def pausar_listener(self, window):
         self.pause_requested = True
-        print("Se pausó los listeners")
+        print("Se pausó los listeners desde", window)
 
-    def reactivar_listener(self):
+    def reactivar_listener(self, window):
         self.pause_requested = False
+        print("Se reactivó los listeners desde", window)
 
     def terminate_thread(self):
         try:

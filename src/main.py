@@ -1,3 +1,5 @@
+# TODO: El ícono del programa no se ve
+
 from PyQt6 import QtWidgets
 from src.view.autoclickerInterface import MainWindow
 import sys

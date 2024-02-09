@@ -50,3 +50,8 @@ class MensajesWindow:
     @staticmethod
     def mostrarMensajeErrorInesperado(mensaje):
         MensajesWindow.mostrarMensaje("Error inesperado", mensaje, QMessageBox.Icon.Critical)
+
+    @staticmethod
+    def mostrarMensajeElementoDuplicado(mensaje):
+        MensajesWindow.mostrarMensaje("Elemento Duplicado", mensaje, QMessageBox.Icon.Information)
+
